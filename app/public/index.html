@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitOps Notes App</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .note { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .note h3 { margin-top: 0; }
+        form { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        input, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button.delete { background-color: #dc3545; }
+        button.edit { background-color: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <h1>NoteOps</h1>
+    
+    <form id="noteForm">
+        <input type="text" id="title" placeholder="Note Title" required>
+        <textarea id="body" placeholder="Note content..." rows="4" required></textarea>
+        <button type="submit">Add Note</button>
+    </form>
+
+    <div id="notesList"></div>
+
+    <script>
+        const noteForm = document.getElementById('noteForm');
+        const notesList = document.getElementById('notesList');
+        let editingId = null;
+
+        async function fetchNotes() {
+            const res = await fetch('/notes');
+            const notes = await res.json();
+            notesList.innerHTML = '';
+            notes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note';
+                div.innerHTML = `
+                    <h3>${note.title}</h3>
+                    <p>${note.body}</p>
+                    <button class="edit" onclick="editNote('${note.id}', '${note.title.replace(/'/g, "\\'")}', '${note.body.replace(/'/g, "\\"')}')">Edit</button>
+                    <button class="delete" onclick="deleteNote('${note.id}')">Delete</button>
+                `;
+                notesList.appendChild(div);
+            });
+        }
+
+        noteForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const body = document.getElementById('body').value;
+
+            if (editingId) {
+                await fetch(`/notes/${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, body })
+                });
+                editingId = null;
+                noteForm.querySelector('button').innerText = 'Add Note';
+            } else {
+                await fetch('/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, body })
+                });
+            }
+
+            noteForm.reset();
+            fetchNotes();
+        };
+
+        window.editNote = (id, title, body) => {
+            editingId = id;
+            document.getElementById('title').value = title;
+            document.getElementById('body').value = body;
+            noteForm.querySelector('button').innerText = 'Update Note';
+        };
+
+        window.deleteNote = async (id) => {
+            if (confirm('Delete this note?')) {
+                await fetch(`/notes/${id}`, { method: 'DELETE' });
+                fetchNotes();
+            }
+        };
+
+        fetchNotes();
+    </script>
+</body>
+</html>
