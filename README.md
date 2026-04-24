@@ -1,53 +1,53 @@
-# NoteOps GitOps Project
+# NoteOps GitOps Project V2 - Advanced Edition
 
-A complete GitOps workflow for a Node.js note-taking application using GitHub Actions, Helm, ArgoCD, and Kind.
+A production-grade GitOps workflow for a Node.js Express application featuring:
+- **Kustomize** for Multi-Environment Management (Dev/Prod).
+- **Argo Rollouts** for Canary Deployments.
+- **Prometheus & Grafana** for Observability.
+- **Jest & Newman** for Automated Testing.
+- **ArgoCD Image Updater** for manifest-free updates.
 
-## GitOps Flow
+## GitOps Flow V2
 
 ```text
-[ Developer ] --(push)--> [ App Repo ]
-                               |
-                        [ GitHub Action ]
-                               |
-               (Build/Push Docker Image to Hub)
-                               |
-               (Update Tag in Config Repo values.yaml)
-                               |
-                               v
-                        [ Config Repo ] <---(watch)--- [ ArgoCD ]
-                                                           |
-                                                    (Sync to Cluster)
-                                                           |
-                                                    [ Kind Cluster ]
+[ Dev Push ] -> [ GitHub CI ] -> [ Unit Tests ] -> [ Push Image ] -> [ Update Dev Kustomize ]
+                                                                             |
+                                                                       [ ArgoCD Sync ]
+                                                                             |
+                                                                      [ Argo Rollout ]
+                                                                   (Canary: 10% -> 50% -> 100%)
+                                                                             |
+[ Manual Promotion ] -> [ .\promote.ps1 ] -> [ Update Prod Kustomize ] -> [ Prod Sync ]
 ```
 
 ## Prerequisites
 
 - **Windows 10/11**
-- **Docker Desktop** installed and running
-- **GitHub Account**
+- **Docker Desktop** (running)
+- **GitHub Account** & **Docker Hub Account**
 
-## Required Secrets
+## Required Secrets (App Repo)
 
-In your **App Repository** (`noteops`), add the following GitHub Actions secrets:
-
-1. `DOCKERHUB_USERNAME`: Your Docker Hub username (`aneeswar`).
-2. `DOCKERHUB_TOKEN`: A Docker Hub Access Token.
-3. `CONFIG_REPO_PAT`: A GitHub Personal Access Token with `repo` scope (Write access to `notesops-config`).
+1. `DOCKERHUB_USERNAME`: `aneeswar`
+2. `DOCKERHUB_TOKEN`: Docker Hub PAT
+3. `CONFIG_REPO_PAT`: GitHub PAT (repo scope)
 
 ## Project Structure
 
-- **App Repo (`/app`)**: Express API, HTML Frontend, Dockerfile, and CI Workflow.
-- **Config Repo (`/notesops-config`)**: Helm Chart and ArgoCD Application manifest.
-- **`setup.ps1`**: PowerShell script to bootstrap the local environment.
+- **`app/`**: Node.js API with `/metrics` and `/health`, unit tests, and Dockerfile.
+- **`notesops-config/`**:
+  - `deploy/kustomize/base`: Shared Kubernetes resources.
+  - `deploy/kustomize/overlays/dev`: Dev-specific settings + Rollout.
+  - `deploy/kustomize/overlays/prod`: Prod-specific settings + Rollout.
+  - `argocd/`: Application manifests for both environments.
+- **`setup.ps1`**: Installs Kind, Nginx, ArgoCD, Rollouts, and Image Updater.
+- **`promote.ps1`**: Promotes the current dev tag to production.
 
 ## Getting Started
 
-1. **Create the Repositories**:
-   - Create `noteops` and `notesops-config` on GitHub.
-   - Push the respective folders to each repo.
-
-2. **Run the Setup Script**:
+1. **Bootstrap**: Run `.\setup.ps1` to create the cluster and install all controllers.
+2. **Promote**: Run `.\promote.ps1 -SourceEnv dev -TargetEnv prod` to ship to production.
+3. **Monitor**: Access Grafana at `http://localhost/grafana` (if configured in ingress).
    Open PowerShell as Administrator and run:
    ```powershell
    .\setup.ps1

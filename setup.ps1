@@ -46,22 +46,26 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main
 Write-Host "Waiting for Ingress Controller..." -ForegroundColor Yellow
 kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s
 
-# 4. Install ArgoCD
-Write-Host "Installing ArgoCD..." -ForegroundColor Cyan
+# 4. Install ArgoCD + Extensions (Rollouts, Image Updater)
+Write-Host "Installing ArgoCD + Rollouts + Image Updater..." -ForegroundColor Cyan
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-Write-Host "Waiting for ArgoCD pods..." -ForegroundColor Yellow
+# Argo Rollouts Controller
+kubectl create namespace argo-rollouts
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+
+# ArgoCD Image Updater
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/stable/manifests/install.yaml
+
+# Prometheus & Grafana (via Kustomize in Config Repo later, or light install here)
+Write-Host "Waiting for controllers..." -ForegroundColor Yellow
 kubectl wait --namespace argocd --for=condition=ready pod --all --timeout=300s
 
-# 5. Extract ArgoCD Admin Password
-$password = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"
-$decodedPassword = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($password))
-Write-Host "`nArgoCD Login: admin / $decodedPassword" -ForegroundColor Green
-
-# 6. Apply ArgoCD Application
-Write-Host "Applying ArgoCD Application..." -ForegroundColor Cyan
-kubectl apply -f notesops-config/argocd-app.yaml
+# 5. Apply V2 ArgoCD Root Application (App of Apps)
+Write-Host "Applying V2 ArgoCD Bootstrappers..." -ForegroundColor Cyan
+kubectl apply -f notesops-config/argocd/argocd-app-dev.yaml
+kubectl apply -f notesops-config/argocd/argocd-app-prod.yaml
 
 Write-Host "`nSetup Complete! Access your app at http://localhost" -ForegroundColor Green
 Write-Host "Initial sync might take a minute."
