@@ -52,7 +52,7 @@ jobs:
           git config --global user.name "Aneeswar"
           git clone https://${{ secrets.CONFIG_REPO_PAT }}@github.com/${{ github.repository_owner }}/notesops-config.git config-repo
           cd config-repo
-          sed -i "s/tag: .*/tag: ${{ steps.vars.outputs.sha_short }}/" deploy/helm/values.yaml
-          git add deploy/helm/values.yaml
+          sed -i "s/tag: .*/tag: ${{ steps.vars.outputs.sha_short }}/" notesops-config/deploy/helm/values.yaml
+          git add notesops-config/deploy/helm/values.yaml
           git commit -m "Update image tag to ${{ steps.vars.outputs.sha_short }}"
           git push
