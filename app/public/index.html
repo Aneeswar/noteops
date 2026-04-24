@@ -16,7 +16,11 @@
     </style>
 </head>
 <body>
-    <h1>NoteOps</h1>
+    <h1>NoteOps - GitOps Live! 🚀</h1>
+    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; font-family: sans-serif;">
+        <strong>System Status:</strong> Core Deployment Active <br>
+        <strong>Orchestration:</strong> ArgoCD & Kind
+    </div>
     
     <form id="noteForm">
         <input type="text" id="title" placeholder="Note Title" required>
@@ -41,9 +45,11 @@
                 div.innerHTML = `
                     <h3>${note.title}</h3>
                     <p>${note.body}</p>
-                    <button class="edit" onclick="editNote('${note.id}', '${note.title.replace(/'/g, "\\'")}', '${note.body.replace(/'/g, "\\"')}')">Edit</button>
-                    <button class="delete" onclick="deleteNote('${note.id}')">Delete</button>
+                    <button class="edit" id="edit-${note.id}">Edit</button>
+                    <button class="delete" id="del-${note.id}">Delete</button>
                 `;
+                div.querySelector(`#edit-${note.id}`).onclick = () => editNote(note.id, note.title, note.body);
+                div.querySelector(`#del-${note.id}`).onclick = () => deleteNote(note.id);
                 notesList.appendChild(div);
             });
         }
